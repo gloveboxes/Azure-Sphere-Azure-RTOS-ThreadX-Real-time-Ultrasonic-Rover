@@ -54,51 +54,37 @@
 
 #define JSON_MESSAGE_BYTES 128  // Number of bytes to allocate for the JSON telemetry message for IoT Central
 
-// Forward signatures
+ // Forward signatures
 static void InitPeripheralGpiosAndHandlers(void);
 static void ClosePeripheralGpiosAndHandlers(void);
-static void NetworkConnectionStatusHandler(EventLoopTimer* eventLoopTimer);
+static void IntercoreHeartBeatHandler(EventLoopTimer* eventLoopTimer);
 static void InterCoreHandler(LP_INTER_CORE_BLOCK* ic_message_block);
 
 static char msgBuffer[JSON_MESSAGE_BYTES] = { 0 };
 LP_INTER_CORE_BLOCK ic_control_block;
 
-// GPIO Output PeripheralGpios
-//static LP_PERIPHERAL_GPIO networkConnectedLed = { .pin = NETWORK_CONNECTED_LED, .direction = LP_OUTPUT, .initialState = GPIO_Value_Low, .invertPin = true,
-//	.initialise = lp_openPeripheralGpio, .name = "networkConnectedLed" };
-
 // Timers
-static LP_TIMER azureIotConnectionStatusTimer = { .period = { 5, 0 }, .name = "azureIotConnectionStatusTimer", .handler = NetworkConnectionStatusHandler };
+static LP_TIMER intercoreHeartBeatTimer = { .period = { 5, 0 }, .name = "intercoreHeartBeatTimer", .handler = IntercoreHeartBeatHandler };
 
 // Azure IoT Device Twins
 static LP_DEVICE_TWIN_BINDING reportDistanceLeft = { .twinProperty = "ReportDistanceLeft", .twinType = LP_TYPE_INT };
 static LP_DEVICE_TWIN_BINDING reportDistanceRight = { .twinProperty = "ReportDistanceRight", .twinType = LP_TYPE_INT };
 
 // Initialize Sets
-//LP_PERIPHERAL_GPIO* peripheralGpioSet[] = { &networkConnectedLed };
-LP_TIMER* timerSet[] = { &azureIotConnectionStatusTimer };
+LP_TIMER* timerSet[] = { &intercoreHeartBeatTimer };
 LP_DEVICE_TWIN_BINDING* deviceTwinBindingSet[] = { &reportDistanceLeft, &reportDistanceRight };
 
 
-/// <summary>
-/// Check status of connection to Azure IoT
-/// </summary>
-static void NetworkConnectionStatusHandler(EventLoopTimer* eventLoopTimer)
+static void IntercoreHeartBeatHandler(EventLoopTimer* eventLoopTimer)
 {
-	//if (ConsumeEventLoopTimerEvent(eventLoopTimer) != 0)
-	//{
-	//	lp_terminate(ExitCode_ConsumeEventLoopTimeEvent);
-	//	return;
-	//}
+	if (ConsumeEventLoopTimerEvent(eventLoopTimer) != 0)
+	{
+		lp_terminate(ExitCode_ConsumeEventLoopTimeEvent);
+		return;
+	}
 
-	//if (lp_connectToAzureIot())
-	//{
-	//	lp_gpioOn(&networkConnectedLed);
-	//}
-	//else
-	//{
-	//	lp_gpioOff(&networkConnectedLed);
-	//}
+	ic_control_block.cmd = LP_IC_HEARTBEAT;		// Prime RT Core with Component ID Signature
+	lp_sendInterCoreMessage(&ic_control_block, sizeof(ic_control_block));
 }
 
 
@@ -118,7 +104,7 @@ static void InterCoreHandler(LP_INTER_CORE_BLOCK* ic_message_block)
 		break;
 	default:
 		break;
-	}	
+	}
 
 	if (snprintf(msgBuffer, JSON_MESSAGE_BYTES, msgTemplate, ic_message_block->distance_left, ic_message_block->distance_right, msgId++))
 	{
@@ -154,7 +140,7 @@ static void ClosePeripheralGpiosAndHandlers(void)
 	lp_stopTimerSet();
 	lp_stopCloudToDevice();
 
-	lp_closePeripheralGpioSet();
+	//lp_closePeripheralGpioSet();
 	lp_closeDeviceTwinSet();
 
 	lp_stopTimerEventLoop();

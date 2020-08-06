@@ -13,12 +13,15 @@ ADD_LINK_OPTIONS(-specs=nano.specs -specs=nosys.specs)
 
 # Create executable
 add_executable (${PROJECT_NAME} 
-	./demo_threadx/demo_threadx.c 
-	./demo_threadx/rtcoremain.c
-	./MT3620_lib/OS_HAL/src/os_hal_gpio.c
-	./MT3620_lib/OS_HAL/src/os_hal_uart.c
-    ./MT3620_lib/OS_HAL/src/os_hal_dma.c
-	 "./Ultrasonic/ultrasonic.c")
+	"./demo_threadx/demo_threadx.c"
+	"./demo_threadx/rtcoremain.c"
+	"./demo_threadx/mt3620-intercore.c"
+    "./demo_threadx/mt3620-uart-poll.c"
+	"./MT3620_lib/OS_HAL/src/os_hal_gpio.c"
+	"./MT3620_lib/OS_HAL/src/os_hal_uart.c"
+    "./MT3620_lib/OS_HAL/src/os_hal_dma.c"
+	"./Ultrasonic/ultrasonic.c"
+	 )
 
 include_directories(${PROJECT_NAME} PUBLIC
                     ./)
