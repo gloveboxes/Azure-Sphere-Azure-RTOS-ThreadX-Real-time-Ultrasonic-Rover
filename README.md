@@ -18,7 +18,7 @@ This is part of the #JulyOT [IoT Tech Community](http://aka.ms/julyot) series, a
 
 ## Source code and learning resources
 
-Source code: [Azure Sphere seeing eyed rover Real-time Azure RTOS ThreadX sensors and Azure IoT](https://gloveboxes.github.io/Azure-Sphere-Rover-Bot-FreeRTOS-with-Azure-IoT/).
+Source code: [Azure Sphere seeing eyed rover Real-time Azure RTOS ThreadX sensors and Azure IoT](https://github.com/gloveboxes/Azure-Sphere-Azure-RTOS-ThreadX-Real-time-Ultrasonic-Rover).
 
 Learning resources: [Azure Sphere Developer Learning Path](https://github.com/gloveboxes/Azure-Sphere-Learning-Path).
 
