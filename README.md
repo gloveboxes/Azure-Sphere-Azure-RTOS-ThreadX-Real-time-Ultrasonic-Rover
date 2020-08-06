@@ -1,4 +1,6 @@
-# Build a Rover combining the best of Azure Sphere security with Azure RTOS ThreadX
+# Secure IoT with Azure RTOS ThreadX, Azure Sphere, and Azure IoT
+
+Better together, learn how to build a secure IoT solution with Azure RTOS ThreadX and Azure Sphere.
 
 ![](resources/architecture.png)
 
@@ -62,9 +64,9 @@ The application running on the Azure Sphere consists of two parts.
 ### Real-time Azure RTOS ThreadX Application
 
 * The Real-time Azure RTOS ThreadX application running on one of the M4 cores that is responsible for running the timing-sensitive HC-SR04 ultrasonic distance sensor.
-* Distance is measured every 100 milliseconds so the rover can decide the best route.
-* The sensor requires precise microsecond timing to trigger the distance measurement process, so it is a perfect candidate for running on the Real-time core as a Azure RTOS ThreadX Task.
-* Every 5 seconds a Azure RTOS ThreadX Task sends distance telemetry to the Azure Sphere A7 High-level application.
+* Distance is measured every 20 milliseconds so the rover can decide the best route.
+* The sensor requires precise microsecond timing to trigger the distance measurement process, so it is a perfect candidate for running on the Real-time core as a Azure RTOS ThreadX thread.
+* Every 5 seconds a Azure RTOS ThreadX thread sends distance telemetry to the Azure Sphere A7 High-level application.
 
 ### Azure IoT High-level Application
 
