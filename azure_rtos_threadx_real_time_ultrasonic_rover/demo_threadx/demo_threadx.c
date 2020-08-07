@@ -218,7 +218,7 @@ void thread_update_azure_iot_entry(ULONG thread_input)
 {
 	while (true)
 	{
-		tx_thread_sleep(MS_TO_TICK(3000));
+		tx_thread_sleep(MS_TO_TICK(1000));
 
 		if (newDataReady)
 		{

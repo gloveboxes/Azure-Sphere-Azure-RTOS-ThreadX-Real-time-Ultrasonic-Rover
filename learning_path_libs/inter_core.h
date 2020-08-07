@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../Shared/inc/inter_core_definition.h"
+#include "../Shared/inc/inter_core_definition.h"
 #include "eventloop_timer_utilities.h"
 #include "terminate.h"
 #include "timer.h"

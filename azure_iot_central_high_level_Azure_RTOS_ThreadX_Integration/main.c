@@ -35,13 +35,13 @@
 
 #include "hw/azure_sphere_learning_path.h"
 
-#include "learning_path_libs/azure_iot.h"
-#include "learning_path_libs/exit_codes.h"
-#include "learning_path_libs/globals.h"
-#include "learning_path_libs/inter_core.h"
-#include "learning_path_libs/peripheral_gpio.h"
-#include "learning_path_libs/terminate.h"
-#include "learning_path_libs/timer.h"
+#include "azure_iot.h"
+#include "exit_codes.h"
+#include "globals.h"
+#include "inter_core.h"
+#include "peripheral_gpio.h"
+#include "terminate.h"
+#include "timer.h"
 
 #include "applibs_versions.h"
 #include <applibs/gpio.h>
@@ -73,6 +73,11 @@ static LP_DEVICE_TWIN_BINDING reportDistanceRight = { .twinProperty = "ReportDis
 // Initialize Sets
 LP_TIMER* timerSet[] = { &intercoreHeartBeatTimer };
 LP_DEVICE_TWIN_BINDING* deviceTwinBindingSet[] = { &reportDistanceLeft, &reportDistanceRight };
+
+// Message property set
+static LP_MESSAGE_PROPERTY messageLog = { .key = "log", .value = "false" };
+static LP_MESSAGE_PROPERTY messageAppId = { .key = "appid", .value = "rover" };
+static LP_MESSAGE_PROPERTY* messageProperties[] = { &messageLog, &messageAppId };
 
 
 static void IntercoreHeartBeatHandler(EventLoopTimer* eventLoopTimer)
@@ -108,7 +113,9 @@ static void InterCoreHandler(LP_INTER_CORE_BLOCK* ic_message_block)
 
 	if (snprintf(msgBuffer, JSON_MESSAGE_BYTES, msgTemplate, ic_message_block->distance_left, ic_message_block->distance_right, msgId++))
 	{
+		lp_setMessageProperties(messageProperties, NELEMS(messageProperties));	// send msg with properties
 		lp_sendMsg(msgBuffer);
+		lp_clearMessageProperties();	//optional: clear if you sending other messages and you don't want these properties
 	}
 }
 
