@@ -67,7 +67,7 @@ target_link_libraries(${PROJECT_NAME} applibs pthread gcc_s c azsphere_libs)
 
 target_include_directories(${PROJECT_NAME} PUBLIC
                            ../learning_path_libs
-                           ./)
+                          )
 
 target_compile_options(${PROJECT_NAME} PRIVATE -Wno-unknown-pragmas)
 set_source_files_properties(../learning_path_libs/AVNET/lsm6dso_reg.c PROPERTIES COMPILE_FLAGS -Wno-conversion)
