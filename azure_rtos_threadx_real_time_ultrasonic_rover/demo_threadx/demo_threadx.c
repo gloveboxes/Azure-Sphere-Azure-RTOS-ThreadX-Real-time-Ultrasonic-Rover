@@ -2,7 +2,7 @@
    threads of different priorities, using a message queue, semaphore, mutex, event flags group,
    byte pool, and block pool.  */
 
-#include "../Shared/inc/inter_core_definition.h"
+#include "../inter_core_definition/inc/inter_core_definition.h"
 #include "hw/azure_sphere_learning_path.h"
 #include "mt3620-intercore.h" // Support for inter Core Communications
 #include "os_hal_gpio.h"
