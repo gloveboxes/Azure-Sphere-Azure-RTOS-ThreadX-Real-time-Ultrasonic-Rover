@@ -54,8 +54,8 @@
 /*
 Driver ported by: Dave Glover
 Date: August 2020
-Acknowledgment: Built from ST Micro samples 
-	https://github.com/STMicroelectronics/STMems_Standard_C_drivers/tree/master/lsm6dso_STdC 
+Acknowledgment: Built from ST Micro samples
+	https://github.com/STMicroelectronics/STMems_Standard_C_drivers/tree/master/lsm6dso_STdC
 	https://github.com/STMicroelectronics/STMems_Standard_C_drivers/tree/master/lps22hh_STdC
 	https://github.com/STMicroelectronics/STMems_Standard_C_drivers/blob/master/lsm6dso_STdC/example/lsm6dso_sensor_hub_lps22hh.c
 
@@ -98,6 +98,7 @@ static int i2cHandle = -1;
 static stmdev_ctx_t dev_ctx;
 static stmdev_ctx_t pressure_ctx;
 static bool lps22hhDetected;
+static bool initialized = false;
 
 /* Extern variables ----------------------------------------------------------*/
 
@@ -115,6 +116,100 @@ static void platform_delay(uint32_t ms);
 static void platform_init(void);
 static int32_t lsm6dso_read_lps22hh_cx(void* ctx, uint8_t reg, uint8_t* data, uint16_t len);
 static int32_t lsm6dso_write_lps22hh_cx(void* ctx, uint8_t reg, uint8_t* data, uint16_t len);
+
+
+/*
+ * @brief  Write generic device register (platform dependent)
+ *
+ * @param  handle    customizable argument. In this examples is used in
+ *                   order to select the correct sensor bus handler.
+ * @param  reg       register to write
+ * @param  bufp      pointer to data to write in register reg
+ * @param  len       number of consecutive register to write
+ *
+ */
+static int32_t platform_write(void* handle, uint8_t reg, uint8_t* bufp, uint16_t len)
+{
+	uint8_t cmdBuffer[len + 1];
+	cmdBuffer[0] = reg;
+	memcpy(&cmdBuffer[1], bufp, (size_t)len);
+
+	int32_t retVal = I2CMaster_Write(*(int*)handle, LSM6DSO_ADDRESS, cmdBuffer, (size_t)(len + 1));
+	if (retVal != len + 1)
+	{
+		Log_Debug("ERROR: Expected return value to match count\n");
+	}
+
+	return 0;
+}
+
+
+/*
+ * @brief  Read generic device register (platform dependent)
+ *
+ * @param  handle    customizable argument. In this examples is used in
+ *                   order to select the correct sensor bus handler.
+ * @param  reg       register to read
+ * @param  bufp      pointer to buffer that store the data read
+ * @param  len       number of consecutive register to read
+ *
+ */
+static int32_t platform_read(void* handle, uint8_t reg, uint8_t* bufp, uint16_t len)
+{
+	int32_t retVal = I2CMaster_WriteThenRead(*(int*)handle, LSM6DSO_ADDRESS, &reg, 1, bufp, (size_t)len);
+	if (retVal < 0)
+	{
+		Log_Debug("ERROR: Expected return value to match count\n");
+	}
+
+	return 0;
+}
+
+
+/*
+ * @brief  platform specific delay (platform dependent)
+ *
+ * @param  ms        delay in ms
+ *
+ */
+static void platform_delay(uint32_t ms)
+{
+	struct timespec ts;
+
+	ts.tv_sec = (long int)(ms / 1000u);
+	ts.tv_nsec = (long int)((ms - ((long unsigned int)ts.tv_sec * 1000u)) * 1000000u);
+
+	nanosleep(&ts, NULL);
+}
+
+
+/*
+ * @brief  platform specific initialization (platform dependent)
+ */
+static void platform_init(void)
+{
+	// IMPLEMENT
+	i2cHandle = I2CMaster_Open(I2cMaster2);
+	if (i2cHandle < 0)
+	{
+		Log_Debug("ERROR: I2CMaster_Open: errno=%d (%s)\n", errno, strerror(errno));
+		return;
+	}
+
+	int result = I2CMaster_SetBusSpeed(i2cHandle, I2C_BUS_SPEED_STANDARD);
+	if (result != 0)
+	{
+		Log_Debug("ERROR: I2CMaster_SetBusSpeed: errno=%d (%s)\n", errno, strerror(errno));
+		return;
+	}
+
+	result = I2CMaster_SetTimeout(i2cHandle, 100);
+	if (result != 0)
+	{
+		Log_Debug("ERROR: I2CMaster_SetTimeout: errno=%d (%s)\n", errno, strerror(errno));
+		return;
+	}
+}
 
 
 //static void read_imu(void)
@@ -162,9 +257,15 @@ static int32_t lsm6dso_write_lps22hh_cx(void* ctx, uint8_t reg, uint8_t* data, u
 //}
 
 
-AccelerationMilligForce get_acceleration(void)
+AccelerationMilligForce lp_get_acceleration(void)
 {
 	uint8_t reg;
+
+	if (!initialized)
+	{
+		accelerationMilligForce.x = accelerationMilligForce.y = accelerationMilligForce.z = NAN;
+		return accelerationMilligForce;
+	}
 
 	/* Read output only if new xl value is available */
 	lsm6dso_xl_flag_data_ready_get(&dev_ctx, &reg);
@@ -192,9 +293,15 @@ AccelerationMilligForce get_acceleration(void)
 }
 
 
-AngularRateDegreesPerSecond get_angular_rate(void)
+AngularRateDegreesPerSecond lp_get_angular_rate(void)
 {
 	uint8_t reg;
+
+	if (!initialized)
+	{
+		angularRateDps.x = angularRateDps.y = angularRateDps.z = NAN;
+		return angularRateDps;
+	}
 
 	lsm6dso_gy_flag_data_ready_get(&dev_ctx, &reg);
 	if (reg)
@@ -214,12 +321,16 @@ AngularRateDegreesPerSecond get_angular_rate(void)
 }
 
 
-float get_temperature()
+float lp_get_temperature_lps22h(void)	// get_temperature() from lsm6dso is faster
 {
 	lps22hh_reg_t lps22hhReg;
 	int16_t i16bit;
 	static float lps22hhTemperature_degC = NAN;
 
+	if (!initialized)
+	{
+		return NAN;
+	}
 
 	if (lps22hhDetected)
 	{
@@ -240,11 +351,40 @@ float get_temperature()
 }
 
 
-float get_pressure(void)
+
+float lp_get_temperature(void)
+{
+	uint8_t reg;
+	axis1bit16_t data_raw_temperature;
+
+	if (!initialized)
+	{
+		return NAN;
+	}
+
+	lsm6dso_temp_flag_data_ready_get(&dev_ctx, &reg);
+	if (reg)
+	{
+		/* Read temperature data */
+		memset(data_raw_temperature.u8bit, 0x00, sizeof(int16_t));
+		lsm6dso_temperature_raw_get(&dev_ctx, data_raw_temperature.u8bit);
+		return lsm6dso_from_lsb_to_celsius(data_raw_temperature.i16bit);
+	}
+
+	return NAN;
+}
+
+
+float lp_get_pressure(void)
 {
 	lps22hh_reg_t lps22hhReg;
 	uint32_t ui32bit;
 	static float pressure_hPa = NAN;
+
+	if (!initialized)
+	{
+		return NAN;
+	}
 
 	if (lps22hhDetected)
 	{
@@ -265,8 +405,13 @@ float get_pressure(void)
 }
 
 
-void calibrate_angular_rate(void)
+void lp_calibrate_angular_rate(void)
 {
+	if (!initialized)
+	{
+		return;
+	}
+
 	// Read the raw angular rate data from the device to use as offsets.  We're making the assumption that the device
 	// is stationary.
 
@@ -373,8 +518,10 @@ static void detect_lps22hh(void)
 }
 
 
-void imu_initialize(void)
+void lp_imu_initialize(void)
 {
+	if (initialized) { return; }
+
 	/* Initialize mems driver interface */
 	dev_ctx.write_reg = platform_write;
 	dev_ctx.read_reg = platform_read;
@@ -389,12 +536,16 @@ void imu_initialize(void)
 	platform_init();
 
 	/* Wait sensor boot time */
-	platform_delay(10);
+	platform_delay(20);
 
 	/* Check device ID */
 	lsm6dso_device_id_get(&dev_ctx, &whoamI);
 	if (whoamI != LSM6DSO_ID)
-		while (1);
+	{
+		initialized = false;
+		return;
+	}
+
 
 	/* Restore default configuration */
 	lsm6dso_reset_set(&dev_ctx, PROPERTY_ENABLE);
@@ -423,107 +574,15 @@ void imu_initialize(void)
 	lsm6dso_xl_hp_path_on_out_set(&dev_ctx, LSM6DSO_LP_ODR_DIV_100);
 	lsm6dso_xl_filter_lp2_set(&dev_ctx, PROPERTY_ENABLE);
 
-	//calibrate_angular_rate();
+	//lp_calibrate_angular_rate();
 
 	detect_lps22hh();
+
+	initialized = true;
 
 	//read_imu();
 
 	/* Read samples in polling mode (no int) */
-}
-
-
-/*
- * @brief  Write generic device register (platform dependent)
- *
- * @param  handle    customizable argument. In this examples is used in
- *                   order to select the correct sensor bus handler.
- * @param  reg       register to write
- * @param  bufp      pointer to data to write in register reg
- * @param  len       number of consecutive register to write
- *
- */
-static int32_t platform_write(void* handle, uint8_t reg, uint8_t* bufp, uint16_t len)
-{
-	uint8_t cmdBuffer[len + 1];
-	cmdBuffer[0] = reg;
-	memcpy(&cmdBuffer[1], bufp, (size_t)len);
-
-	int32_t retVal = I2CMaster_Write(*(int*)handle, LSM6DSO_ADDRESS, cmdBuffer, (size_t)(len + 1));
-	if (retVal != len + 1)
-	{
-		Log_Debug("ERROR: Expected return value to match count\n");
-	}
-
-	return 0;
-}
-
-
-/*
- * @brief  Read generic device register (platform dependent)
- *
- * @param  handle    customizable argument. In this examples is used in
- *                   order to select the correct sensor bus handler.
- * @param  reg       register to read
- * @param  bufp      pointer to buffer that store the data read
- * @param  len       number of consecutive register to read
- *
- */
-static int32_t platform_read(void* handle, uint8_t reg, uint8_t* bufp, uint16_t len)
-{
-	int32_t retVal = I2CMaster_WriteThenRead(*(int*)handle, LSM6DSO_ADDRESS, &reg, 1, bufp, (size_t)len);
-	if (retVal < 0)
-	{
-		Log_Debug("ERROR: Expected return value to match count\n");
-	}
-
-	return 0;
-}
-
-
-/*
- * @brief  platform specific delay (platform dependent)
- *
- * @param  ms        delay in ms
- *
- */
-static void platform_delay(uint32_t ms)
-{
-	struct timespec ts;
-
-	ts.tv_sec = (long int)(ms / 1000u);
-	ts.tv_nsec = (long int)((ms - ((long unsigned int)ts.tv_sec * 1000u)) * 1000000u);
-
-	nanosleep(&ts, NULL);
-}
-
-
-/*
- * @brief  platform specific initialization (platform dependent)
- */
-static void platform_init(void)
-{
-	// IMPLEMENT
-	i2cHandle = I2CMaster_Open(I2cMaster2);
-	if (i2cHandle < 0)
-	{
-		Log_Debug("ERROR: I2CMaster_Open: errno=%d (%s)\n", errno, strerror(errno));
-		return;
-	}
-
-	int result = I2CMaster_SetBusSpeed(i2cHandle, I2C_BUS_SPEED_STANDARD);
-	if (result != 0)
-	{
-		Log_Debug("ERROR: I2CMaster_SetBusSpeed: errno=%d (%s)\n", errno, strerror(errno));
-		return;
-	}
-
-	result = I2CMaster_SetTimeout(i2cHandle, 100);
-	if (result != 0)
-	{
-		Log_Debug("ERROR: I2CMaster_SetTimeout: errno=%d (%s)\n", errno, strerror(errno));
-		return;
-	}
 }
 
 
@@ -532,9 +591,9 @@ static void platform_init(void)
 /// </summary>
 /// <param name="fd">File descriptor to close</param>
 /// <param name="fdName">File descriptor name to use in error message</param>
-void CloseFdPrintError(int fd, const char* fdName)
+static void CloseFdPrintError(int fd, const char* fdName)
 {
-	if (fd >= 0)
+	if (initialized && fd >= 0)
 	{
 		int result = close(fd);
 		if (result != 0)
@@ -542,13 +601,14 @@ void CloseFdPrintError(int fd, const char* fdName)
 			Log_Debug("ERROR: Could not close fd %s: %s (%d).\n", fdName, strerror(errno), errno);
 		}
 	}
+	initialized = false;
 }
 
 
 /// <summary>
 ///     Closes the I2C interface File Descriptors.
 /// </summary>
-void imu_close(void)
+void lp_imu_close(void)
 {
 	CloseFdPrintError(i2cHandle, "i2c");
 }
