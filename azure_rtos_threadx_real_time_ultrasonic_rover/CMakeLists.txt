@@ -21,6 +21,11 @@ add_executable (${PROJECT_NAME}
 	"./MT3620_lib/OS_HAL/src/os_hal_uart.c"
     "./MT3620_lib/OS_HAL/src/os_hal_dma.c"
 	"./Ultrasonic/ultrasonic.c"
+	"../learning_path_libs/AVNET/lps22hh_reg.c"
+    "../learning_path_libs/AVNET/lsm6dso_reg.c"
+    "../learning_path_libs/AVNET/imu_temp_pressure.c"
+    "../learning_path_libs/AVNET/light_sensor.c"
+    "../learning_path_libs/AVNET/board.c"
 	 )
 
 include_directories(${PROJECT_NAME} PUBLIC

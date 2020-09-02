@@ -113,4 +113,87 @@ Azure IoT Central is also extensible using rules and workflows. For more informa
 
 ---
 
+## How to install the real time tool chain on Linux
+
+1. Download the [GNU Arm Embedded Toolchain](https://developer.arm.com/tools-and-software/open-source-software/developer-tools/gnu-toolchain/gnu-rm/downloads)
+2. Install the downloaded package. I install in the /opt directory.
+
+    ```bash
+    sudo tar -xjvf gcc-arm-none-eabi-9-2020-q2-update-x86_64-linux.tar.bz2 -C /opt
+    ```
+
+3. Update your path. Open ~/.bashrc and at the end add.
+
+    ```bash
+    export PATH=$PATH:/opt/gcc-arm-none-eabi-9-2020-q2-update/bin
+    ```
+
+---
+
+## How to update to the latest ThreadX bits
+
+### How to determine current ThreadX version
+
+1. Open tx_api.h.
+
+    ```c
+    /**************************************************************************/
+    /*                                                                        */
+    /*  APPLICATION INTERFACE DEFINITION                       RELEASE        */
+    /*                                                                        */
+    /*    tx_api.h                                            PORTABLE C      */
+    /*                                                           6.0.1        */
+    ```
+
+### Download latest bits
+
+Clone the ThreadX GitHub repo 
+
+```bash
+git clone https://github.com/azure-rtos/threadx.git
+```
+
+1. Update the [Cortex M4 bits](https://github.com/azure-rtos/threadx/tree/master/ports/cortex_m4/gnu)
+2. Update the [ThreadX common bits](https://github.com/azure-rtos/threadx/tree/master/common)
+
+### Customise for Azure Sphere
+
+1. Open **tx_initialize_low_level.S**
+2. Change **SYSTEM_CLOCK      =   200000000**
+3. Comment out @    .global     __RAM_segment_used_end__ and the related code, as there is no such symbol in the .ld file. It's likely these areas are already commented out.
+
+    ```asm
+    @    .global     __RAM_segment_used_end__
+    ```
+
+    and
+
+    ```asm
+    @
+    @    /* Set base of available memory to end of non-initialised RAM area.  */
+    @     
+    @    LDR     r0, =_tx_initialize_unused_memory       @ Build address of unused memory pointer
+    @    LDR     r1, =__RAM_segment_used_end__           @ Build first free address   
+    @    ADD     r1, r1, #4                              @ 
+    @    STR     r1, [r0]                                @ Setup first unused memory pointer
+    @
+    ```
+
+---
+
+## Tips and tricks
+
+### Milliseconds to ticks
+
+```c
+/* Convert from millisecond to ThreadX Tick value. */
+#define MS_TO_TICK(ms)  ((ms) * (TX_TIMER_TICKS_PER_SECOND) / 1000)
+```
+
+### Ticks per millisecond
+
+1 tick = 10ms. It is configurable.
+
+---
+
 Have fun and stay safe and be sure to follow us on [#JulyOT](https://twitter.com/hashtag/JulyOT?src=hash&ref_src=twsrc%5Etfw).
