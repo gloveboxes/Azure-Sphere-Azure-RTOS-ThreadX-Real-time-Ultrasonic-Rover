@@ -181,6 +181,42 @@ git clone https://github.com/azure-rtos/threadx.git
 
 ---
 
+## How to update to the latest MediaTec bits
+
+[MediaTek MT3620 M4 Driver & Real-Time Application Sample Code](https://github.com/MediaTek-Labs/mt3620_m4_software)
+
+MediaTec regularly update the MT3620 M4 drivers and samples.
+
+### Enabling the System Tick Handler
+
+Open the MT3620_M4_BSP/scr/nvic.c file
+
+Search for 
+
+```c
+void SystmTick_Handler(void)
+{
+	sys_tick_in_ms++;
+	#ifdef OSAI_FREERTOS
+	extern void SysTick_Handler(void);
+	SysTick_Handler();
+	#endif
+}
+```
+
+Comment out the ifdef/endif directives to enable the system tick handler for Azure ThreadX.
+
+```
+void SystmTick_Handler(void)
+{
+	sys_tick_in_ms++;
+	//#ifdef OSAI_FREERTOS
+	extern void SysTick_Handler(void);
+	SysTick_Handler();
+	//#endif
+}
+```
+
 ## Tips and tricks
 
 ### Milliseconds to ticks
